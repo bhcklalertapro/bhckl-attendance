@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BHCKL Attendance — Admin</title>
+<style>
+  :root {
+    --navy: #1B2A4A;
+    --navy-light: #2A3F66;
+    --gold: #C9A227;
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --ok: #2E7D4F;
+    --ok-bg: #E7F2EB;
+    --warn: #C9822E;
+    --warn-bg: #FBF0E1;
+    --error: #B23B3B;
+    --error-bg: #FBEAEA;
+    --text: #1A1A1A;
+    --text-muted: #6B7280;
+    --border: #E5E5E0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .gate {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .gate-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px 28px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .gate-card h1 {
+    font-size: 18px;
+    color: var(--navy);
+    margin: 0 0 6px;
+  }
+  .gate-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 20px;
+  }
+  .gate-card input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+  .gate-card button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: var(--navy);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .gate-error {
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .gate-error.visible { display: block; }
+
+  .app { display: none; max-width: 980px; margin: 0 auto; }
+  .app.visible { display: block; }
+
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header .org { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
+  header h1 { font-size: 19px; margin: 2px 0 0; }
+  header .admin-name { font-size: 13px; opacity: 0.8; }
+
+  nav.tabs {
+    display: flex;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    border: none;
+    background: transparent;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+  nav.tabs button.active {
+    color: var(--navy);
+    border-bottom-color: var(--gold);
+  }
+
+  main { padding: 20px 16px 60px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 24px 0 12px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  .empty-state {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 16px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  table th {
+    text-align: left;
+    background: #F0EFEA;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  table tr:last-child td { border-bottom: none; }
+
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .table-scroll table { border-radius: 0; border: none; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.error { background: var(--error-bg); color: var(--error); }
+  .badge.neutral { background: #EEEEEA; color: var(--text-muted); }
+
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    align-items: end;
+  }
+  .filter-field { display: flex; flex-direction: column; gap: 4px; }
+  .filter-field label { font-size: 12px; color: var(--text-muted); }
+  .filter-field select, .filter-field input {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+  }
+
+  .btn {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--gold); color: var(--navy); }
+  .btn-secondary { background: var(--navy); color: white; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .export-links {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .export-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--navy);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,0.15);
+    border-top-color: var(--navy);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .photo-link { color: var(--navy); text-decoration: underline; font-size: 12px; }
+
+  @media (max-width: 640px) {
+    table { font-size: 12px; }
+    table th, table td { padding: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h1>Admin Access</h1>
+    <p>Enter your Staff ID to view the attendance dashboard.</p>
+    <input type="text" id="gateStaffId" placeholder="Staff ID" autocomplete="off">
+    <button type="button" id="gateSubmit">Continue</button>
+    <div class="gate-error" id="gateError">Not authorized. This Staff ID does not have admin access.</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <header>
+    <div>
+      <div class="org">High Commission of Brunei Darussalam, Kuala Lumpur</div>
+      <h1>Attendance — Admin</h1>
+    </div>
+    <div class="admin-name" id="adminNameDisplay"></div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab-btn active" data-tab="today">Today</button>
+    <button type="button" class="tab-btn" data-tab="report">Monthly Report</button>
+  </nav>
+
+  <main>
+    <div class="tab-panel active" id="tab-today">
+      <div class="section-title">Currently Clocked In</div>
+      <div id="currentlyInContainer"><div class="empty-state">Loading…</div></div>
+
+      <div class="section-title">Flagged Today</div>
+      <div id="flaggedContainer"><div class="empty-state">Loading…</div></div>
+
+      <div class="section-title">No Clock-Out Recorded Today</div>
+      <div id="incompleteContainer"><div class="empty-state">Loading…</div></div>
+    </div>
+
+    <div class="tab-panel" id="tab-report">
+      <div class="filters">
+        <div class="filter-field">
+          <label for="reportMonth">Month</label>
+          <select id="reportMonth"></select>
+        </div>
+        <div class="filter-field">
+          <label for="reportYear">Year</label>
+          <select id="reportYear"></select>
+        </div>
+        <div class="filter-field">
+          <label for="reportDept">Department</label>
+          <select id="reportDept">
+            <option value="All">All Departments</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-secondary" id="generateReportBtn">Generate</button>
+      </div>
+
+      <div id="reportContainer"></div>
+
+      <div id="exportSection" style="display:none;">
+        <div class="section-title">Export</div>
+        <button type="button" class="btn btn-primary" id="exportBtn">Export as Sheet + PDF</button>
+        <div class="export-links" id="exportLinks"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // Apps Script backend URL
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGStGxBUIAwekJAelLnmUuVRP3uw9wwi0k4r3sZk2cCKgqT0qiDjLLDCt5zSBBmVXcSQ/exec';
+  let adminStaffId = null;
+
+  async function callServer(fnName, ...args) {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: fnName, args })
+    });
+    if (!response.ok) {
+      throw new Error('Network error — please check your connection and try again.');
+    }
+    const json = await response.json();
+    if (!json.success) {
+      throw new Error(json.error || 'Server error. Please try again.');
+    }
+    return json.data;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function flagBadge(flag) {
+    if (!flag) return '<span class="badge neutral">—</span>';
+    if (flag === 'OK') return '<span class="badge ok">OK</span>';
+    if (flag === 'Outside Radius') return '<span class="badge error">Outside Radius</span>';
+    if (flag === 'Off-site Duty') return '<span class="badge warn">Off-site Duty</span>';
+    return `<span class="badge neutral">${escapeHtml(flag)}</span>`;
+  }
+
+  // ─────────────────────────────────────────────
+  // GATE
+  // ─────────────────────────────────────────────
+  document.getElementById('gateSubmit').addEventListener('click', submitGate);
+  document.getElementById('gateStaffId').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitGate();
+  });
+
+  async function submitGate() {
+    const id = document.getElementById('gateStaffId').value.trim();
+    const errorEl = document.getElementById('gateError');
+    const btn = document.getElementById('gateSubmit');
+    if (!id) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    errorEl.classList.remove('visible');
+
+    try {
+      const result = await callServer('checkAdminAccess', id);
+      if (!result.authorized) {
+        errorEl.classList.add('visible');
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+        return;
+      }
+      adminStaffId = id;
+      document.getElementById('adminNameDisplay').textContent = result.name;
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      initApp();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.add('visible');
+      btn.disabled = false;
+      btn.textContent = 'Continue';
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // TABS
+  // ─────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  // TODAY TAB
+  // ─────────────────────────────────────────────
+  async function loadToday() {
+    try {
+      const data = await callServer('getAdminDashboardData', adminStaffId);
+      renderCurrentlyIn(data.currentlyIn);
+      renderFlagged(data.flagged);
+      renderIncomplete(data.incomplete);
+    } catch (err) {
+      ['currentlyInContainer', 'flaggedContainer', 'incompleteContainer'].forEach(id => {
+        document.getElementById(id).innerHTML = `<div class="empty-state">Could not load: ${escapeHtml(err.message)}</div>`;
+      });
+    }
+  }
+
+  function renderCurrentlyIn(records) {
+    const el = document.getElementById('currentlyInContainer');
+    if (!records.length) {
+      el.innerHTML = '<div class="empty-state">No one is currently clocked in.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="table-scroll"><table>
+      <tr><th>Staff</th><th>Dept</th><th>Duty</th><th>Clock In</th><th>Location</th><th>Photo</th></tr>
+      ${records.map(r => `
+        <tr>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.department)}</td>
+          <td>${flagBadge(r.dutyTypeIn)}</td>
+          <td>${escapeHtml(r.clockIn)}</td>
+          <td>${flagBadge(r.locationFlagIn)}</td>
+          <td>${r.photoUrl ? `<a class="photo-link" href="${escapeHtml(r.photoUrl)}" target="_blank">View</a>` : '—'}</td>
+        </tr>
+      `).join('')}
+    </table></div>`;
+  }
+
+  function renderFlagged(records) {
+    const el = document.getElementById('flaggedContainer');
+    if (!records.length) {
+      el.innerHTML = '<div class="empty-state">No flagged records today.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="table-scroll"><table>
+      <tr><th>Staff</th><th>Dept</th><th>Clock In</th><th>Clock Out</th><th>Flag In</th><th>Flag Out</th><th>Device</th></tr>
+      ${records.map(r => `
+        <tr>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.department)}</td>
+          <td>${escapeHtml(r.clockIn)}</td>
+          <td>${escapeHtml(r.clockOut) || '—'}</td>
+          <td>${flagBadge(r.locationFlagIn)}</td>
+          <td>${flagBadge(r.locationFlagOut)}</td>
+          <td>${String(r.deviceMatch).indexOf('MISMATCH') !== -1 ? '<span class="badge error">Mismatch</span>' : '<span class="badge ok">OK</span>'}</td>
+        </tr>
+      `).join('')}
+    </table></div>`;
+  }
+
+  function renderIncomplete(records) {
+    const el = document.getElementById('incompleteContainer');
+    if (!records.length) {
+      el.innerHTML = '<div class="empty-state">No incomplete shifts today.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="table-scroll"><table>
+      <tr><th>Staff</th><th>Dept</th><th>Clock In</th><th>Status</th></tr>
+      ${records.map(r => `
+        <tr>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.department)}</td>
+          <td>${escapeHtml(r.clockIn)}</td>
+          <td><span class="badge error">No Clock-Out Recorded</span></td>
+        </tr>
+      `).join('')}
+    </table></div>`;
+  }
+
+  // ─────────────────────────────────────────────
+  // MONTHLY REPORT TAB
+  // ─────────────────────────────────────────────
+  function populateMonthYearSelectors() {
+    const monthSelect = document.getElementById('reportMonth');
+    const yearSelect = document.getElementById('reportYear');
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const now = new Date();
+
+    monthNames.forEach((name, i) => {
+      const opt = document.createElement('option');
+      opt.value = i + 1;
+      opt.textContent = name;
+      if (i === now.getMonth()) opt.selected = true;
+      monthSelect.appendChild(opt);
+    });
+
+    for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSelect.appendChild(opt);
+    }
+  }
+
+  async function loadDepartments() {
+    try {
+      const result = await callServer('getDepartmentList', adminStaffId);
+      const select = document.getElementById('reportDept');
+      (result.departments || []).forEach(dept => {
+        const opt = document.createElement('option');
+        opt.value = dept;
+        opt.textContent = dept;
+        select.appendChild(opt);
+      });
+    } catch (err) {
+      // Non-fatal — department filter just won't have options beyond "All"
+    }
+  }
+
+  document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+
+  let lastReportParams = null;
+
+  async function generateReport() {
+    const month = document.getElementById('reportMonth').value;
+    const year = document.getElementById('reportYear').value;
+    const department = document.getElementById('reportDept').value;
+    const btn = document.getElementById('generateReportBtn');
+    const container = document.getElementById('reportContainer');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    container.innerHTML = '<div class="empty-state">Loading…</div>';
+    document.getElementById('exportSection').style.display = 'none';
+    document.getElementById('exportLinks').innerHTML = '';
+
+    try {
+      const data = await callServer('getMonthlyReport', adminStaffId, year, month, department);
+      lastReportParams = { month, year, department };
+      renderReport(data);
+      document.getElementById('exportSection').style.display = 'block';
+    } catch (err) {
+      container.innerHTML = `<div class="empty-state">Could not load report: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate';
+    }
+  }
+
+  function renderReport(data) {
+    const container = document.getElementById('reportContainer');
+    if (!data.rows.length) {
+      container.innerHTML = '<div class="empty-state">No attendance records for this period.</div>';
+      return;
+    }
+
+    let html = `<div class="table-scroll"><table>
+      <tr><th>Staff</th><th>Dept</th><th>Date</th><th>Duty In</th><th>Clock In</th><th>Clock Out</th><th>Duty Out</th><th>Flag In</th><th>Flag Out</th><th>Status</th></tr>
+      ${data.rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.department)}</td>
+          <td>${escapeHtml(r.date)}</td>
+          <td>${escapeHtml(r.dutyTypeIn)}</td>
+          <td>${escapeHtml(r.clockIn)}</td>
+          <td>${escapeHtml(r.clockOut) || '—'}</td>
+          <td>${escapeHtml(r.dutyTypeOut) || '—'}</td>
+          <td>${flagBadge(r.locationFlagIn)}</td>
+          <td>${flagBadge(r.locationFlagOut)}</td>
+          <td>${r.status === 'No Clock-Out Recorded' ? '<span class="badge error">No Clock-Out</span>' : (r.status === 'Complete' ? '<span class="badge ok">Complete</span>' : escapeHtml(r.status))}</td>
+        </tr>
+      `).join('')}
+    </table></div>`;
+
+    html += `<div class="section-title">No Clock-Out Recorded — Summary</div>`;
+    if (!data.summary.length) {
+      html += '<div class="empty-state">No incomplete records this month.</div>';
+    } else {
+      html += `<div class="table-scroll"><table>
+        <tr><th>Staff</th><th>Dept</th><th>Days</th></tr>
+        ${data.summary.map(s => `
+          <tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.department)}</td><td>${s.noClockOutDays}</td></tr>
+        `).join('')}
+      </table></div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', exportReport);
+
+  async function exportReport() {
+    if (!lastReportParams) return;
+    const btn = document.getElementById('exportBtn');
+    const linksEl = document.getElementById('exportLinks');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating…';
+    linksEl.innerHTML = '';
+
+    try {
+      const result = await callServer('exportMonthlyReport', adminStaffId, lastReportParams.year, lastReportParams.month, lastReportParams.department);
+      linksEl.innerHTML = `
+        <a href="${escapeHtml(result.sheetUrl)}" target="_blank">Open Sheet</a>
+        <a href="${escapeHtml(result.pdfUrl)}" target="_blank">Open PDF</a>
+      `;
+    } catch (err) {
+      linksEl.innerHTML = `<div class="empty-state">Export failed: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Export as Sheet + PDF';
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // INIT
+  // ─────────────────────────────────────────────
+  function initApp() {
+    populateMonthYearSelectors();
+    loadDepartments();
+    loadToday();
+  }
+</script>
+</body>
+</html>

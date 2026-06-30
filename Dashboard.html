@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BHCKL Attendance</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BHCKL Attendance">
+<script>
+  // Apps Script backend URL
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGStGxBUIAwekJAelLnmUuVRP3uw9wwi0k4r3sZk2cCKgqT0qiDjLLDCt5zSBBmVXcSQ/exec';
+</script>
+<style>
+  :root {
+    --navy: #1B2A4A;
+    --navy-light: #2A3F66;
+    --gold: #C9A227;
+    --gold-dark: #A6841E;
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --ok: #2E7D4F;
+    --ok-bg: #E7F2EB;
+    --warn: #C9822E;
+    --warn-bg: #FBF0E1;
+    --error: #B23B3B;
+    --error-bg: #FBEAEA;
+    --text: #1A1A1A;
+    --text-muted: #6B7280;
+    --border: #E5E5E0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 20px 20px 16px;
+    padding-top: calc(20px + env(safe-area-inset-top));
+  }
+
+  header .org {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin: 0 0 4px;
+  }
+
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  header .staff-name {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-top: 6px;
+  }
+
+  main {
+    flex: 1;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .status-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+  }
+
+  .status-card .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .status-card .value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
+  .status-card .sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .duty-toggle {
+    display: flex;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .duty-toggle button {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .duty-toggle button.active {
+    background: var(--navy);
+    color: white;
+  }
+
+  .duty-note-field {
+    display: none;
+  }
+  .duty-note-field.visible {
+    display: block;
+  }
+
+  .duty-note-field textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    min-height: 56px;
+    color: var(--text);
+  }
+  .duty-note-field textarea:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+  }
+  .duty-note-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .camera-area {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .camera-area video,
+  .camera-area canvas,
+  .camera-area img.preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .camera-area .placeholder {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 0 24px;
+  }
+
+  .camera-area .retake {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .main-action {
+    width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+    border: none;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+
+  .main-action:active {
+    transform: scale(0.98);
+  }
+
+  .main-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .main-action.clock-in {
+    background: var(--gold);
+    color: var(--navy);
+  }
+
+  .main-action.clock-out {
+    background: var(--navy);
+    color: white;
+  }
+
+  .secondary-action {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+    cursor: pointer;
+  }
+
+  .flag-banner {
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+  }
+  .flag-banner.visible { display: block; }
+  .flag-banner.ok { background: var(--ok-bg); color: var(--ok); }
+  .flag-banner.warn { background: var(--warn-bg); color: var(--warn); }
+  .flag-banner.error { background: var(--error-bg); color: var(--error); }
+
+  .history-link {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+
+  /* Random check-in modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-overlay.visible {
+    display: flex;
+  }
+  .modal-card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+  }
+  .modal-card .icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+  .modal-card h2 {
+    font-size: 17px;
+    margin: 0 0 8px;
+    color: var(--navy);
+  }
+  .modal-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0 0 18px;
+  }
+  .modal-card button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--navy);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.25s ease;
+    pointer-events: none;
+    max-width: 90%;
+    text-align: center;
+    z-index: 200;
+  }
+  .toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .main-action:active { transform: none; }
+    .spinner { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <p class="org">High Commission of Brunei Darussalam, Kuala Lumpur</p>
+    <h1>Attendance</h1>
+    <div class="staff-name" id="staffNameDisplay">Loading…</div>
+  </header>
+
+  <main>
+    <div class="status-card" id="statusCard">
+      <div class="label">Today</div>
+      <div class="value" id="statusValue">Checking status…</div>
+      <div class="sub" id="statusSub"></div>
+    </div>
+
+    <div class="flag-banner" id="flagBanner"></div>
+
+    <div>
+      <div class="duty-toggle" id="dutyToggle">
+        <button type="button" data-duty="Office Duty" class="active">Office Duty</button>
+        <button type="button" data-duty="Off-site Duty">Off-site Duty</button>
+      </div>
+      <div class="duty-note-field" id="dutyNoteField">
+        <label for="dutyNote" style="margin-top:10px;">What's the off-site duty? (optional)</label>
+        <textarea id="dutyNote" placeholder="e.g. Escort delegation to MOFA"></textarea>
+      </div>
+    </div>
+
+    <div class="camera-area" id="cameraArea">
+      <div class="placeholder" id="cameraPlaceholder">Camera will open when you start clocking in</div>
+      <video id="cameraVideo" autoplay playsinline muted style="display:none;"></video>
+      <canvas id="cameraCanvas" style="display:none;"></canvas>
+      <img id="cameraPreview" class="preview" style="display:none;" alt="Captured selfie">
+      <button type="button" class="retake" id="retakeBtn" style="display:none;">Retake</button>
+    </div>
+
+    <button type="button" class="main-action clock-in" id="mainActionBtn">
+      Clock In
+    </button>
+
+    <div class="history-link" id="historyLink">View my attendance history</div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="checkInModal">
+  <div class="modal-card">
+    <div class="icon">📍</div>
+    <h2>Quick presence check</h2>
+    <p>Please confirm you're still on duty. This takes one tap.</p>
+    <button type="button" id="checkInConfirmBtn">Confirm I'm here</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─────────────────────────────────────────────
+  // STATE
+  // ─────────────────────────────────────────────
+  const state = {
+    staffId: null,
+    staffName: null,
+    deviceId: null,
+    isClockedIn: false,
+    dutyType: 'Office Duty',
+    capturedPhoto: null, // base64 data URL
+    stream: null,
+    checkInPollHandle: null
+  };
+
+  // ─────────────────────────────────────────────
+  // DEVICE ID — generated once, persisted in localStorage as the primary
+  // store, with an attempt to also keep it in IndexedDB as a harder-to-clear
+  // backup (private browsing / storage-clearing can still wipe both, which
+  // is an inherent limitation of browser-based device binding vs a native app).
+  // ─────────────────────────────────────────────
+  function getOrCreateDeviceId() {
+    let id = localStorage.getItem('bhckl_device_id');
+    if (!id) {
+      id = 'DEV-' + crypto.randomUUID();
+      localStorage.setItem('bhckl_device_id', id);
+    }
+    return id;
+  }
+
+  function getStaffId() {
+    // In production this should come from an authenticated session, not a
+    // free-typed field. For Phase 3 scaffolding, store it after first entry
+    // so staff aren't re-prompted every time they open the app.
+    let id = localStorage.getItem('bhckl_staff_id');
+    return id;
+  }
+
+  function setStaffId(id) {
+    localStorage.setItem('bhckl_staff_id', id);
+  }
+
+  // ─────────────────────────────────────────────
+  // TOAST
+  // ─────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('visible'), 3200);
+  }
+
+  // ─────────────────────────────────────────────
+  // GEOLOCATION
+  // ─────────────────────────────────────────────
+  function getLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported on this device.'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => reject(new Error('Could not get your location. Please enable location services and try again.')),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // CAMERA
+  // ─────────────────────────────────────────────
+  async function openCamera() {
+    const video = document.getElementById('cameraVideo');
+    const placeholder = document.getElementById('cameraPlaceholder');
+    const preview = document.getElementById('cameraPreview');
+    const retakeBtn = document.getElementById('retakeBtn');
+
+    preview.style.display = 'none';
+    retakeBtn.style.display = 'none';
+    placeholder.style.display = 'none';
+
+    try {
+      state.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 540 } },
+        audio: false
+      });
+      video.srcObject = state.stream;
+      video.style.display = 'block';
+    } catch (err) {
+      placeholder.style.display = 'flex';
+      placeholder.textContent = 'Camera access is needed to clock in. Please allow camera access and try again.';
+      throw err;
+    }
+  }
+
+  function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    const preview = document.getElementById('cameraPreview');
+    const retakeBtn = document.getElementById('retakeBtn');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    state.capturedPhoto = canvas.toDataURL('image/jpeg', 0.85);
+
+    preview.src = state.capturedPhoto;
+    preview.style.display = 'block';
+    video.style.display = 'none';
+    retakeBtn.style.display = 'block';
+
+    stopCamera();
+  }
+
+  function stopCamera() {
+    if (state.stream) {
+      state.stream.getTracks().forEach(t => t.stop());
+      state.stream = null;
+    }
+  }
+
+  function retakePhoto() {
+    state.capturedPhoto = null;
+    document.getElementById('cameraPreview').style.display = 'none';
+    document.getElementById('retakeBtn').style.display = 'none';
+    openCamera();
+  }
+
+  // ─────────────────────────────────────────────
+  // DUTY TOGGLE
+  // ─────────────────────────────────────────────
+  function initDutyToggle() {
+    const toggle = document.getElementById('dutyToggle');
+    const noteField = document.getElementById('dutyNoteField');
+
+    toggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-duty]');
+      if (!btn) return;
+      toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.dutyType = btn.dataset.duty;
+      noteField.classList.toggle('visible', state.dutyType === 'Off-site Duty');
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // FLAG BANNER
+  // ─────────────────────────────────────────────
+  function showFlag(message, type) {
+    const banner = document.getElementById('flagBanner');
+    banner.textContent = message;
+    banner.className = 'flag-banner visible ' + type;
+  }
+  function hideFlag() {
+    document.getElementById('flagBanner').classList.remove('visible');
+  }
+
+  // ─────────────────────────────────────────────
+  // SERVER CALLS — uses fetch() instead of google.script.run so the page
+  // can run at the top level (not inside an iframe), which is required for
+  // camera and geolocation APIs to work in the browser.
+  // ─────────────────────────────────────────────
+  async function callServer(fnName, ...args) {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // text/plain avoids CORS preflight on Apps Script
+      body: JSON.stringify({ action: fnName, args })
+    });
+    if (!response.ok) {
+      throw new Error('Network error — please check your connection and try again.');
+    }
+    const json = await response.json();
+    if (!json.success) {
+      throw new Error(json.error || 'Server error. Please try again.');
+    }
+    return json.data;
+  }
+
+  // ─────────────────────────────────────────────
+  // MAIN ACTION: CLOCK IN / OUT
+  // ─────────────────────────────────────────────
+  async function handleMainAction() {
+    const btn = document.getElementById('mainActionBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Please wait…';
+    hideFlag();
+
+    try {
+      if (!state.isClockedIn) {
+        await doClockIn();
+      } else {
+        await doClockOut();
+      }
+    } catch (err) {
+      showToast(err.message || 'Something went wrong. Please try again.');
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
+  async function doClockIn() {
+    if (!state.capturedPhoto) {
+      throw new Error('Please take a selfie before clocking in.');
+    }
+    const loc = await getLocation();
+    const payload = {
+      staffId: state.staffId,
+      deviceId: state.deviceId,
+      lat: loc.lat,
+      lng: loc.lng,
+      photoBase64: state.capturedPhoto,
+      dutyType: state.dutyType,
+      dutyNote: document.getElementById('dutyNote').value.trim()
+    };
+    const result = await callServer('clockIn', payload);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    showToast(result.message);
+    if (result.deviceStatus === 'MISMATCH') {
+      showFlag('This device does not match your registered device. Admin has been notified for review.', 'warn');
+    } else if (result.locationFlag === 'Outside Radius') {
+      showFlag('You clocked in outside the office radius under Office Duty. This has been flagged for review.', 'warn');
+    } else if (result.locationFlag === 'Off-site Duty') {
+      showFlag('Off-site duty recorded.', 'ok');
+    }
+    await refreshStatus();
+  }
+
+  async function doClockOut() {
+    const loc = await getLocation();
+    const payload = {
+      staffId: state.staffId,
+      deviceId: state.deviceId,
+      lat: loc.lat,
+      lng: loc.lng,
+      dutyType: state.dutyType,
+      dutyNote: document.getElementById('dutyNote').value.trim()
+    };
+    const result = await callServer('clockOut', payload);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    showToast(result.message);
+    if (result.deviceStatus === 'MISMATCH') {
+      showFlag('This device does not match your registered device. Admin has been notified for review.', 'warn');
+    } else if (result.locationFlag === 'Outside Radius') {
+      showFlag('You clocked out outside the office radius under Office Duty. This has been flagged for review.', 'warn');
+    }
+    stopCheckInPolling();
+    await refreshStatus();
+  }
+
+  // ─────────────────────────────────────────────
+  // STATUS REFRESH — switches the UI between clock-in and clock-out modes
+  // ─────────────────────────────────────────────
+  async function refreshStatus() {
+    const btn = document.getElementById('mainActionBtn');
+    const statusValue = document.getElementById('statusValue');
+    const statusSub = document.getElementById('statusSub');
+    const cameraArea = document.getElementById('cameraArea');
+
+    try {
+      const status = await callServer('getTodayStatus', state.staffId);
+      state.isClockedIn = status.isOpen;
+
+      if (status.isOpen) {
+        statusValue.textContent = 'Clocked in';
+        statusSub.textContent = 'Since ' + status.clockInTimeFormatted;
+        btn.className = 'main-action clock-out';
+        btn.textContent = 'Clock Out';
+        btn.disabled = false;
+        cameraArea.style.display = 'none'; // no selfie needed for clock-out
+        startCheckInPolling();
+      } else if (status.status === 'Complete') {
+        statusValue.textContent = 'Shift complete';
+        statusSub.textContent = status.clockInTimeFormatted + ' – ' + status.clockOutTimeFormatted;
+        btn.className = 'main-action clock-in';
+        btn.textContent = 'Clock In';
+        btn.disabled = true; // already completed a shift today
+        statusSub.textContent += ' · See you tomorrow';
+        cameraArea.style.display = 'flex';
+      } else if (status.status === 'No Clock-Out Recorded') {
+        statusValue.textContent = 'No clock-out recorded';
+        statusSub.textContent = 'Clocked in at ' + status.clockInTimeFormatted;
+        btn.className = 'main-action clock-in';
+        btn.textContent = 'Clock In';
+        btn.disabled = true;
+        cameraArea.style.display = 'flex';
+      } else {
+        statusValue.textContent = 'Not clocked in';
+        statusSub.textContent = 'Tap below to start your shift';
+        btn.className = 'main-action clock-in';
+        btn.textContent = 'Clock In';
+        btn.disabled = false;
+        cameraArea.style.display = 'flex';
+        if (!state.capturedPhoto) {
+          openCamera().catch(() => {});
+        }
+      }
+    } catch (err) {
+      statusValue.textContent = 'Unable to load status';
+      statusSub.textContent = err.message;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // RANDOM CHECK-IN POLLING (only while app is open/foregrounded)
+  // ─────────────────────────────────────────────
+  function startCheckInPolling() {
+    stopCheckInPolling();
+    state.checkInPollHandle = setInterval(async () => {
+      try {
+        const result = await callServer('hasCheckInDue', state.staffId);
+        if (result.due) {
+          stopCheckInPolling();
+          document.getElementById('checkInModal').classList.add('visible');
+        }
+      } catch (err) {
+        // Silent fail on polling — don't interrupt the user with a polling error.
+      }
+    }, 60000); // check once a minute while the app is open
+  }
+
+  function stopCheckInPolling() {
+    if (state.checkInPollHandle) {
+      clearInterval(state.checkInPollHandle);
+      state.checkInPollHandle = null;
+    }
+  }
+
+  async function handleCheckInConfirm() {
+    const btn = document.getElementById('checkInConfirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Confirming…';
+    try {
+      const loc = await getLocation();
+      const result = await callServer('recordCheckIn', {
+        staffId: state.staffId,
+        lat: loc.lat,
+        lng: loc.lng
+      });
+      document.getElementById('checkInModal').classList.remove('visible');
+      showToast(result.success ? 'Thanks — presence confirmed.' : result.error);
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Confirm I\'m here';
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // FIRST-TIME STAFF ID ENTRY
+  // ─────────────────────────────────────────────
+  function promptForStaffId() {
+    const id = prompt('Enter your Staff ID to get started:');
+    if (id && id.trim()) {
+      setStaffId(id.trim());
+      return id.trim();
+    }
+    return null;
+  }
+
+  // ─────────────────────────────────────────────
+  // INIT
+  // ─────────────────────────────────────────────
+  async function init() {
+    state.deviceId = getOrCreateDeviceId();
+    let staffId = getStaffId();
+    if (!staffId) {
+      staffId = promptForStaffId();
+    }
+    if (!staffId) {
+      document.getElementById('staffNameDisplay').textContent = 'Staff ID required to continue.';
+      return;
+    }
+    state.staffId = staffId;
+
+    initDutyToggle();
+    document.getElementById('mainActionBtn').addEventListener('click', handleMainAction);
+    document.getElementById('retakeBtn').addEventListener('click', retakePhoto);
+    document.getElementById('checkInConfirmBtn').addEventListener('click', handleCheckInConfirm);
+    document.getElementById('historyLink').addEventListener('click', () => {
+      window.location.href = '?page=history';
+    });
+
+    try {
+      const staffInfo = await callServer('getStaffInfo', state.staffId);
+      if (!staffInfo.found) {
+        document.getElementById('staffNameDisplay').textContent = 'Staff ID not recognized. Contact admin.';
+        document.getElementById('mainActionBtn').disabled = true;
+        return;
+      }
+      document.getElementById('staffNameDisplay').textContent = staffInfo.name;
+      state.staffName = staffInfo.name;
+    } catch (err) {
+      document.getElementById('staffNameDisplay').textContent = 'Could not verify staff record.';
+    }
+
+    await refreshStatus();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  // Re-check status when the app regains focus (e.g. reopened after being closed),
+  // since check-in prompts and cutoff status can change while the app was backgrounded.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.staffId) {
+      refreshStatus();
+    }
+  });
+
+  // ─────────────────────────────────────────────
+  // SERVICE WORKER REGISTRATION (PWA installability)
+  // ─────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {
+        // Non-fatal: app still works without offline caching / install prompt.
+      });
+    });
+  }
+</script>
+</body>
+</html>
