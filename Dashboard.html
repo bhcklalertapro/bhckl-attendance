@@ -212,25 +212,6 @@
     cursor: pointer;
   }
 
-  .capture-btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    border: 2px solid var(--navy);
-    background: white;
-    color: var(--navy);
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .capture-btn.visible {
-    display: flex;
-  }
-
   .main-action {
     width: 100%;
     padding: 18px;
@@ -388,7 +369,7 @@
 <body>
 <div class="app">
   <header>
-    <p class="org">High Commission of Brunei Darussalam, Kuala Lumpur</p>
+    <p class="org">High Commission of Brunei Darussalam in Malaysia</p>
     <h1>Attendance</h1>
     <div class="staff-name" id="staffNameDisplay">Loading…</div>
   </header>
@@ -409,7 +390,7 @@
       </div>
       <div class="duty-note-field" id="dutyNoteField">
         <label for="dutyNote" style="margin-top:10px;">What's the off-site duty? (optional)</label>
-        <textarea id="dutyNote" placeholder="e.g. Escort delegation to MOFA"></textarea>
+        <textarea id="dutyNote" placeholder="e.g. Sila nyatakan tugasan dan pegawai yang mengarahkan"></textarea>
       </div>
     </div>
 
@@ -420,10 +401,6 @@
       <img id="cameraPreview" class="preview" style="display:none;" alt="Captured selfie">
       <button type="button" class="retake" id="retakeBtn" style="display:none;">Retake</button>
     </div>
-
-    <button type="button" class="capture-btn" id="captureBtn">
-      📷 Take Selfie
-    </button>
 
     <button type="button" class="main-action clock-in" id="mainActionBtn">
       Clock In
@@ -547,7 +524,6 @@
     const canvas = document.getElementById('cameraCanvas');
     const preview = document.getElementById('cameraPreview');
     const retakeBtn = document.getElementById('retakeBtn');
-    const captureBtn = document.getElementById('captureBtn');
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -560,7 +536,6 @@
     preview.style.display = 'block';
     video.style.display = 'none';
     retakeBtn.style.display = 'block';
-    captureBtn.classList.remove('visible'); // hide Take Selfie button once photo is taken
 
     stopCamera();
   }
@@ -576,7 +551,6 @@
     state.capturedPhoto = null;
     document.getElementById('cameraPreview').style.display = 'none';
     document.getElementById('retakeBtn').style.display = 'none';
-    document.getElementById('captureBtn').classList.add('visible'); // show Take Selfie button again
     openCamera();
   }
 
@@ -714,12 +688,6 @@
     const statusValue = document.getElementById('statusValue');
     const statusSub = document.getElementById('statusSub');
     const cameraArea = document.getElementById('cameraArea');
-    const captureBtn = document.getElementById('captureBtn');
-
-    const showCamera = (show) => {
-      cameraArea.style.display = show ? 'flex' : 'none';
-      captureBtn.classList.toggle('visible', show && !state.capturedPhoto);
-    };
 
     try {
       const status = await callServer('getTodayStatus', state.staffId);
@@ -731,30 +699,30 @@
         btn.className = 'main-action clock-out';
         btn.textContent = 'Clock Out';
         btn.disabled = false;
-        showCamera(false); // no selfie needed for clock-out
+        cameraArea.style.display = 'none'; // no selfie needed for clock-out
         startCheckInPolling();
       } else if (status.status === 'Complete') {
         statusValue.textContent = 'Shift complete';
-        statusSub.textContent = status.clockInTimeFormatted + ' – ' + status.clockOutTimeFormatted + ' · See you tomorrow';
+        statusSub.textContent = status.clockInTimeFormatted + ' – ' + status.clockOutTimeFormatted;
         btn.className = 'main-action clock-in';
         btn.textContent = 'Clock In';
-        btn.disabled = true;
-        showCamera(false); // shift done, no need to show camera
+        btn.disabled = true; // already completed a shift today
+        statusSub.textContent += ' · See you tomorrow';
+        cameraArea.style.display = 'flex';
       } else if (status.status === 'No Clock-Out Recorded') {
         statusValue.textContent = 'No clock-out recorded';
         statusSub.textContent = 'Clocked in at ' + status.clockInTimeFormatted;
         btn.className = 'main-action clock-in';
         btn.textContent = 'Clock In';
         btn.disabled = true;
-        showCamera(false);
+        cameraArea.style.display = 'flex';
       } else {
-        // Not clocked in — show camera and capture button
         statusValue.textContent = 'Not clocked in';
-        statusSub.textContent = 'Take a selfie, then tap Clock In';
+        statusSub.textContent = 'Tap below to start your shift';
         btn.className = 'main-action clock-in';
         btn.textContent = 'Clock In';
         btn.disabled = false;
-        showCamera(true);
+        cameraArea.style.display = 'flex';
         if (!state.capturedPhoto) {
           openCamera().catch(() => {});
         }
@@ -840,7 +808,6 @@
 
     initDutyToggle();
     document.getElementById('mainActionBtn').addEventListener('click', handleMainAction);
-    document.getElementById('captureBtn').addEventListener('click', capturePhoto);
     document.getElementById('retakeBtn').addEventListener('click', retakePhoto);
     document.getElementById('checkInConfirmBtn').addEventListener('click', handleCheckInConfirm);
     document.getElementById('historyLink').addEventListener('click', () => {
